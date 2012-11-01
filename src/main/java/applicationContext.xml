@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:aop="http://www.springframework.org/schema/aop"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xmlns:jee="http://www.springframework.org/schema/jee"
+    xmlns:lang="http://www.springframework.org/schema/lang"
+    xmlns:p="http://www.springframework.org/schema/p"
+    xmlns:tx="http://www.springframework.org/schema/tx"
+    xmlns:util="http://www.springframework.org/schema/util"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee.xsd
+        http://www.springframework.org/schema/lang http://www.springframework.org/schema/lang/spring-lang.xsd
+        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+<context:annotation-config />
+	<context:component-scan base-package="com.g.contact" />
+
+	<bean id="jspViewResolver"
+		class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="viewClass"
+			value="org.springframework.web.servlet.view.JstlView" />
+		<property name="prefix" value="/WEB-INF/jsp/" />
+		<property name="suffix" value=".jsp" />
+	</bean>
+
+	<bean id="messageSource"
+		class="org.springframework.context.support.ReloadableResourceBundleMessageSource">
+		<property name="basename" value="classpath:messages" />
+		<property name="defaultEncoding" value="UTF-8" />
+	</bean>
+	<bean id="propertyConfigurer"
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer"
+		p:location="classpath:system.properties" />
+
+	<bean id="dataSource"
+		class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close"
+		p:driverClassName="${jdbc.driverClassName}"
+		p:url="${jdbc.databaseurl}" p:username="${jdbc.username}"
+		p:password="${jdbc.password}" />
+
+
+	 <bean id="sessionFactory"
+		class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="configLocation">
+			<value>classpath:hibernate.cfg.xml</value>
+		</property>
+		<property name="configurationClass">
+			<value>org.hibernate.cfg.AnnotationConfiguration</value>
+		</property>
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.dialect">${jdbc.dialect}</prop>
+				<prop key="hibernate.show_sql">true</prop>
+			</props>
+		</property>
+	</bean>
+
+	<tx:annotation-driven />
+		<!-- 配置事务管理器
+        (理论上可配置多个transactionManager来适应多个数据源-不过不能是同一ID) -->
+	<bean id="transactionManager"
+		class="org.springframework.orm.hibernate3.HibernateTransactionManager">
+		<property name="sessionFactory" ref="sessionFactory" />
+	</bean>
+	
+	<!--
+		事件监听:实现了 ApplicationListener监听接口,
+		包括AuthenticationCredentialsNotFoundEvent 事件，
+		AuthorizationFailureEvent事件，AuthorizedEvent事件， PublicInvocationEvent事
+		件。 -->
+	<bean class="org.springframework.security.authentication.event.LoggerListener" />
+	
+	<!--
+		对事务管理器进行事务设置。增加如下代码： 这里创建了一个advice(通知)，对事务管理器进行事务设置，这里意思是指，
+		对于以save、del、update开头的方法应用事务。
+	-->
+	<tx:advice id="smAdvice" transaction-manager="transactionManager">
+		<!-- 设置事务传播属性 -->
+		<tx:attributes>
+			<tx:method name="find*" read-only="true" rollback-for="Exception" />
+			<tx:method name="save*" propagation="REQUIRED" />
+			<tx:method name="del*" propagation="REQUIRED" />
+			<tx:method name="update*" propagation="REQUIRED" />
+			<tx:method name="insert*" propagation="REQUIRED" />
+			<tx:method name="edit*" propagation="REQUIRED" />
+			<tx:method name="display*" propagation="REQUIRED" />
+			<tx:method name="get*" propagation="REQUIRED" />
+		</tx:attributes>
+	</tx:advice>
+	
+	
+	<!-- 下面就把事务应用到具体的类  -->
+<!-- 	<aop:config>		
+		<aop:pointcut id="smMethod" expression="execution(* avatar.*.buz.impl.*.*(..))" />
+		<aop:advisor pointcut-ref="smMethod" advice-ref="smAdvice" />
+	</aop:config> -->
+
+
+
+	<!-- 用户的密码加密或解密 -->
+	<bean id="passwordEncoder"
+		class="org.springframework.security.authentication.encoding.Md5PasswordEncoder" />
+		
+	<!-- 基于EHCache的系统缓存管理器-->
+	<bean id="cacheManager" class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean" p:configLocation="classpath:ehcache.xml" />
+
+	<bean id="userEhCache" class="org.springframework.cache.ehcache.EhCacheFactoryBean">
+		<property name="cacheName" value="userCache" />
+		<property name="cacheManager" ref="cacheManager" />
+	</bean>
+	<!-- 启用用户的缓存功能 -->
+	<bean id="userCache" class="org.springframework.security.core.userdetails.cache.EhCacheBasedUserCache">
+		<property name="cache" ref="userEhCache" />
+	</bean>
+	
+	
+
+
+	<!-- spring security自带的与权限有关的数据读写Jdbc模板 -->
+	<bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	
+	<!-- 设置权限的前缀为AUTH_，而不是ROLE_。 -->
+	<bean id="roleVoter" class="org.springframework.security.access.vote.RoleVoter">
+    	<property name="rolePrefix" value="AUTH_"/>
+    </bean>
+	
+
+	<!-- acl（access control list）缓存管理 -->
+	<bean id="aclCache"
+		class="org.springframework.security.acls.domain.EhCacheBasedAclCache">
+		<constructor-arg ref="aclEhCache" />
+	</bean>
+	
+	<bean id="aclEhCache" class="org.springframework.cache.ehcache.EhCacheFactoryBean">
+		<property name="cacheManager" ref="cacheManager" />
+		<property name="cacheName" value="aclCache" />
+	</bean>
+
+
+
+
+
+	<!-- 注入SysUsersDao和SysAuthoritiesResourcesDao（通过数据库管理用户、角色、权限和资源）-->
+	<bean id="sysUserDao" class="com.ss.dao.SysUserDao">
+		<property name="passwordEncoder" ref="passwordEncoder"/>
+		<property name="sysRoleDao" ref="sysRoleDao"></property>
+		<property name="sessionFactory" ref="sessionFactory" />
+	</bean>
+	
+	
+	<bean id="sysRoleDao" class="com.ss.dao.SysRoleDao">
+		<property name="sessionFactory" ref="sessionFactory"/>
+	</bean>
+
+	<bean id="sysAuthorityResourceDao" class="com.ss.dao.SysAuthorityResourceDao">
+		<property name="sessionFactory" ref="sessionFactory" />  
+	</bean> 
+	
+	<!-- 用户详细信息管理：数据源、用户缓存（通过数据库管理用户、角色、权限、资源）。（新版本） 11/3/23  -->
+	<bean id="userDetailsManager" class="com.ss.CustomUserDetailsService">
+		<property name="sysUserDao" ref="sysUserDao" />
+		<property name="sysAuthorityResourceDao" ref="sysAuthorityResourceDao" />
+		<property name="dataSource" ref="dataSource" />
+		<property name="userCache" ref="userCache" />
+	</bean> 
+</beans>

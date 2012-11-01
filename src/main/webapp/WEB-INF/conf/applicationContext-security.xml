@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<b:beans xmlns="http://www.springframework.org/schema/security"
+	xmlns:b="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+    xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+                        http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-3.1.xsd
+                                http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+	<!-- 自动配置模式，拦截所有请求，有ROLE_USER才可以通过 -->
+
+<!-- 	<http auto-config="true">
+		<intercept-url pattern="/login.jsp*" access="IS_AUTHENTICATED_ANONYMOUSLY" />
+		
+        <intercept-url pattern="/admin.jsp" access="ROLE_ADMIN"/>
+		<intercept-url pattern="/**" access="ROLE_USER" />		
+		<form-login login-page="/login.jsp" authentication-failure-url="/login.jsp?login_error=1" />
+	</http> -->
+	<http auto-config="true" access-denied-page="/accessDenied.jsp">
+		<!-- 不要过滤图片等静态资源 -->
+	<!-- 	<intercept-url pattern="/**/*.jpg" filters="none" />
+		<intercept-url pattern="/**/*.png" filters="none" />
+		<intercept-url pattern="/**/*.gif" filters="none" />
+		<intercept-url pattern="/**/*.css" filters="none" />
+		<intercept-url pattern="/**/*.js" filters="none" /> -->
+		<!-- 登录页面和忘记密码页面不过滤  -->
+		<intercept-url pattern="/login.jsp*" access="IS_AUTHENTICATED_ANONYMOUSLY" />
+		<intercept-url pattern="/jsp/forgotpassword.jsp" access="IS_AUTHENTICATED_ANONYMOUSLY" />  
+		<form-login login-page="/login.jsp" authentication-failure-url="/login.jsp?error=true" default-target-url="/index.jsp" />
+
+		<!-- "记住我"功能，采用持久化策略（将用户的登录信息存放在数据库表中） -->
+	<!-- 	<remember-me data-source-ref="dataSource" />		 -->
+		<!-- 检测失效的sessionId,超时时定位到另外一个URL -->
+		<!-- <session-management invalid-session-url="/sessionTimeout.jsp" /> -->		
+		<!-- 增加一个自定义的filter，放在FILTER_SECURITY_INTERCEPTOR之前，
+		实现用户、角色、权限、资源的数据库管理。 11/3/23 -->
+		<custom-filter ref="customFilter" before="FILTER_SECURITY_INTERCEPTOR"/> 		
+	</http>
+	<!-- 认证管理器。用户名密码都集成在配置文件中 -->
+	<authentication-manager>
+		<authentication-provider>
+			<!-- <user-service>
+				<user name="test" password="test" authorities="ROLE_USER" />               
+                <user name="admin" password="admin" authorities="ROLE_USER,ROLE_ADMIN"/>
+			</user-service> -->
+			<jdbc-user-service data-source-ref="dataSource"/> 
+		</authentication-provider>
+	</authentication-manager>
+
+	<!-- 指定中文资源 。默认命名空间是security,所以要加前缀beans: -->
+	<!-- <b:bean id="messageSource"
+		class="org.springframework.context.support.ReloadableResourceBundleMessageSource">
+		<b:property name="basename"
+			value="classpath:org/springframework/security/messages_zh_CN" />
+	</b:bean> -->
+	
+	
+	<!-- 一个自定义的filter，必须包含authenticationManager, accessDecisionManager,securityMetadataSource三个属性。 11/3/23  -->
+	<b:bean id="customFilter" 
+		class="com.ss.CustomFilterSecurityInterceptor">
+		<b:property name="authenticationManager" 
+			ref="authenticationManager"/>
+		<b:property name="accessDecisionManager" 
+			ref="customAccessDecisionManager"/>
+		<b:property name="securityMetadataSource" 
+			ref="customSecurityMetadataSource"/>
+	</b:bean>
+	
+
+	<!-- 注意能够为authentication-manager 设置alias别名  -->
+	<authentication-manager alias="authenticationManager">
+		<authentication-provider user-service-ref="userDetailsManager">
+			<password-encoder ref="passwordEncoder">
+				<salt-source user-property="username" />
+			</password-encoder>
+		</authentication-provider>
+	</authentication-manager>
+
+
+	<!-- 访问决策器，决定某个用户具有的角色，是否有足够的权限去访问某个资源。11/3/23 -->
+	<b:bean id="customAccessDecisionManager"
+		class="com.ss.CustomAccessDecisionManager">
+	</b:bean>  
+
+
+	<!-- 资源源数据定义，将所有的资源和权限对应关系建立起来，即定义某一资源可以被哪些角色去访问。11/3/23 -->
+	<b:bean id="customSecurityMetadataSource"
+		class="com.ss.CustomInvocationSecurityMetadataSourceService">
+	</b:bean>
+		
+</b:beans>

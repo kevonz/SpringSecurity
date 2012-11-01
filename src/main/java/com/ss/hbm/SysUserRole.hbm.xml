@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+<!-- Generated 2011-3-23 11:09:37 by Hibernate Tools 3.2.2.GA -->
+<hibernate-mapping>
+    <class name="com.ss.entity.SysUserRole" table="SYS_USER_ROLE">
+        <id name="id" type="long">
+            <column name="ID" precision="13" scale="0" />
+            <generator class="assigned" />
+        </id>
+        <many-to-one name="sysUser" class="com.ss.entity.SysUser" fetch="select">
+            <column name="USER_ID" length="32" />
+        </many-to-one>
+        <many-to-one name="sysRole" class="com.ss.entity.SysRole" fetch="select">
+            <column name="ROLE_ID" length="32" />
+        </many-to-one>
+        <property name="enabled" type="java.lang.Boolean">
+            <column name="ENABLED" precision="1" scale="0" />
+        </property>
+    </class>
+</hibernate-mapping>

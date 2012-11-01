@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+<!-- Generated 2011-3-23 11:09:37 by Hibernate Tools 3.2.2.GA -->
+<hibernate-mapping>
+    <class name="com.ss.entity.SysAuthority" table="SYS_AUTHORITY">
+        <id name="id" type="string">
+            <column name="ID" length="32" />
+            <generator class="assigned" />
+        </id>
+        <property name="name" type="string">
+            <column name="name" length="40" />
+        </property>
+        <property name="description" type="string">
+            <column name="description" length="100" />
+        </property>
+        <property name="enabled" type="java.lang.Boolean">
+            <column name="ENABLED" precision="1" scale="0" />
+        </property>
+        <property name="issys" type="java.lang.Boolean">
+            <column name="ISSYS" precision="1" scale="0" />
+        </property>
+        <property name="module" type="string">
+            <column name="MODULE" length="4" />
+        </property>
+        <set name="sysRoleAuthority" inverse="true" cascade="all">
+            <key>
+                <column name="AUTHORITY_ID" length="32" />
+            </key>
+            <one-to-many class="com.ss.entity.SysRoleAuthority" />
+        </set>
+        <set name="sysAuthorityResource" inverse="true" cascade="all">
+            <key>
+                <column name="AUTHORITY_ID" length="32" />
+            </key>
+            <one-to-many class="com.ss.entity.SysAuthorityResource" />
+        </set>
+    </class>
+</hibernate-mapping>
